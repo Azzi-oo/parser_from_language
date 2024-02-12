@@ -12,12 +12,10 @@ def create_database():
             CREATE TABLE IF NOT EXISTS proverbs (
                 id INTEGER PRIMARY KEY,
                 Russian TEXT,
-                Lak TEXT
+                Lak TEXT,
+                OrderIndex INTEGER
             )
         ''')
-        # cursor.execute("PRAGMA table_info(proverbs)")
-        # print(cursor.fetchall())
-
         connection.commit()
         connection.close()
     except sqlite3.Error as e:
@@ -31,27 +29,16 @@ def parse_and_insert(html_text):
     soup = BeautifulSoup(html_text, 'html.parser')
     proverbs = soup.find_all('p')
 
-    for i in range(0, len(proverbs)-1, 2):
-        current_proverb = proverbs[i].text.strip()
-        next_proverb = proverbs[i+1].text.strip()
+    for i in range(0, len(proverbs)-1, 3):
+        if i + 2 < len(proverbs):
+            lak_proverb = proverbs[i].text.strip()
+            translation_proverb = proverbs[i+1].text.strip()
+            russian_translation = proverbs[i+2].text.strip()
 
-        current_parts = current_proverb.split(', ')
-        next_parts = next_proverb.split(', ')
-
-        if len(current_parts) == 2 and len(next_parts) == 2:
-            russian, lak = current_parts
-            next_russian, next_lak = next_parts
-
-            print(f"Processing proverb pair: {russian} — {lak}")
-            print(f"Processing next proverb pair: {next_russian} — {next_lak}")
-
-            cursor.execute("INSERT INTO proverbs (Russian, Lak) VALUES (?, ?)", (russian, lak))
-            cursor.execute("INSERT INTO proverbs (Russian, Lak) VALUES (?, ?)", (next_russian, next_lak))
-            print(f"Inserted: Russian: {russian}, Lak: {lak}")
-            print(f"Inserted next: Russian: {next_russian}, Lak: {next_lak}")
+            cursor.execute("INSERT INTO proverbs (Lak, Russian, OrderIndex) VALUES (?, ?, ?)", (lak_proverb, translation_proverb, i))
+            cursor.execute("INSERT INTO proverbs (Russian, OrderIndex) VALUES (?, ?)", (russian_translation, i+1))
         else:
-            print(f"Skipping incomplete proverb pair at index {i}")
-
+            print(f"Skipping incomplete pair at index {i}")
     connection.commit()
     connection.close()
 
@@ -86,6 +73,9 @@ def pdf_to_html(pdf_path):
 def main():
     pdf_path = '/home/azat/PycharmProjects/parser_laks/lak.pdf'
     html_text = pdf_to_html(pdf_path)
+    # html_path = 'lak.html'
+    # with open(html_path, 'r', encoding='utf-8') as html_file:
+    #     html_text = html_file.read()
     create_database()
     parse_and_insert(html_text)
 
