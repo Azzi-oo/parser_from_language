@@ -5,20 +5,23 @@ import fitz
 
 
 def create_database():
-    connection = sqlite3.connect('dict.db')
-    cursor = connection.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS proverbs (
-            id INTEGER PRIMARY KEY,
-            Russian TEXT,
-            Lak TEXT
-        )
-    ''')
-    # cursor.execute("PRAGMA table_info(proverbs)")
-    # print(cursor.fetchall())
+    try:
+        connection = sqlite3.connect('dict.db')
+        cursor = connection.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS proverbs (
+                id INTEGER PRIMARY KEY,
+                Russian TEXT,
+                Lak TEXT
+            )
+        ''')
+        # cursor.execute("PRAGMA table_info(proverbs)")
+        # print(cursor.fetchall())
 
-    connection.commit()
-    connection.close()
+        connection.commit()
+        connection.close()
+    except sqlite3.Error as e:
+        print(f"Error creating db: {e}")
 
 
 def parse_and_insert(html_text):
@@ -26,30 +29,32 @@ def parse_and_insert(html_text):
     cursor = connection.cursor()
 
     soup = BeautifulSoup(html_text, 'html.parser')
-    proverb_pattern = re.compile(r'([^а-яА-Я]+)\s*([^а-яА-Я]+)\s*—\s*([^а-яА-Я]+)\s*([^а-яА-Я]+)\s*')
-
     proverbs = soup.find_all('p')
-    for i in range(0, len(proverbs), 2):
-        match = proverb_pattern.search(proverbs[i].text)
 
-        lak_match = proverb_pattern.search(proverbs[i].text)
-        russian_match = proverb_pattern.search(proverbs[i + 1].text)
+    for i in range(0, len(proverbs)-1, 2):
+        current_proverb = proverbs[i].text.strip()
+        next_proverb = proverbs[i+1].text.strip()
 
-        if lak_match and russian_match:
-            lak = lak_match.group(1).strip()
-            russian = russian_match.group(1).strip()
+        current_parts = current_proverb.split(', ')
+        next_parts = next_proverb.split(', ')
 
-        if match:
-            russian = proverbs[i + 1].text.strip()
-            lak = match.group(1).strip()
-    # for match in soup.find_all('p'):
-    #     proverbs = proverb_pattern.findall(match.text)
+        if len(current_parts) == 2 and len(next_parts) == 2:
+            russian, lak = current_parts
+            next_russian, next_lak = next_parts
 
-    #     for lak, russian in proverbs:
+            print(f"Processing proverb pair: {russian} — {lak}")
+            print(f"Processing next proverb pair: {next_russian} — {next_lak}")
+
             cursor.execute("INSERT INTO proverbs (Russian, Lak) VALUES (?, ?)", (russian, lak))
+            cursor.execute("INSERT INTO proverbs (Russian, Lak) VALUES (?, ?)", (next_russian, next_lak))
+            print(f"Inserted: Russian: {russian}, Lak: {lak}")
+            print(f"Inserted next: Russian: {next_russian}, Lak: {next_lak}")
+        else:
+            print(f"Skipping incomplete proverb pair at index {i}")
 
     connection.commit()
     connection.close()
+
 
 def extract_text_from_pdf(pdf_path):
     text = ''
@@ -59,22 +64,31 @@ def extract_text_from_pdf(pdf_path):
             text += page.get_text()
     return text
 
+
 def pdf_to_html(pdf_path):
     html_text = '<html><body>'
 
     with fitz.open(pdf_path) as pdf_document:
         for page_num in range(pdf_document.page_count):
             page = pdf_document[page_num]
-            html_text += f'<p>{page.get_text()}</p>'
+            text = page.get_text()
+            lines = text.split('\n')
+
+            for i in range(0, len(lines), 2):
+                html_text += f'<p>{lines[i]}</p>'
+                if i + 1 < len(lines):
+                    html_text += f'<p>{lines[i + 1]}</p>'
 
     html_text += '</body></html>'
     return html_text
+
 
 def main():
     pdf_path = '/home/azat/PycharmProjects/parser_laks/lak.pdf'
     html_text = pdf_to_html(pdf_path)
     create_database()
     parse_and_insert(html_text)
+
 
 if __name__ == '__main__':
     main()
