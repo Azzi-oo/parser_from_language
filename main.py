@@ -61,8 +61,8 @@ def pdf_to_html(pdf_path):
             text = page.get_text()
             lines = text.split('\n')
 
-            for i in range(0, len(lines), 2):
-                html_text += f'<p>{lines[i]}</p>'
+            for i in range(0, len(lines)-1, 2):
+                html_text += f'<p>{lines[i]} - {lines[i + 1]}</p>'
                 if i + 1 < len(lines):
                     html_text += f'<p>{lines[i + 1]}</p>'
 
