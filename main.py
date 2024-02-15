@@ -52,32 +52,35 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 
-def pdf_to_html(pdf_path):
-    html_text = '<html><body>'
+def pdf_to_html(html_path):
+    # html_text = '<html><body>'
 
-    with fitz.open(pdf_path) as pdf_document:
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document[page_num]
-            text = page.get_text()
-            lines = text.split('\n')
+    # with fitz.open(pdf_path) as pdf_document:
+    #     for page_num in range(pdf_document.page_count):
+    #         page = pdf_document[page_num]
+    #         text = page.get_text()
+    #         lines = text.split('\n')
 
-            for i in range(0, len(lines)-1, 2):
-                html_text += f'<p>{lines[i]} - {lines[i + 1]}</p>'
-                if i + 1 < len(lines):
-                    html_text += f'<p>{lines[i + 1]}</p>'
+    #         for i in range(0, len(lines)-1, 2):
+    #             html_text += f'<p>{lines[i]} - {lines[i + 1]}</p>'
+    #             # if i + 1 < len(lines):
+    #             #     html_text += f'<p>{lines[i + 1]}</p>'
 
-    html_text += '</body></html>'
+    # html_text += '</body></html>'
+    # return html_text
+    with open(html_path, 'r', encoding='utf-8') as html_file:
+        html_text = html_file.read()
     return html_text
 
 
 def main():
-    pdf_path = '/home/azat/PycharmProjects/parser_laks/lak.pdf'
-    html_text = pdf_to_html(pdf_path)
+    # pdf_path = '/home/azat/PycharmProjects/parser_laks/lak.pdf'
+    html_path = '/home/azat/PycharmProjects/parser_laks/lak.html'
     # html_path = 'lak.html'
     # with open(html_path, 'r', encoding='utf-8') as html_file:
     #     html_text = html_file.read()
     create_database()
-    parse_and_insert(html_text)
+    parse_and_insert(pdf_to_html(html_path))
 
 
 if __name__ == '__main__':
